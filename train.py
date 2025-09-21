@@ -212,7 +212,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if plots:
                 Thread(target=plot_labels, args=(labels, save_dir, loggers), daemon=True).start()
                 if tb_writer:
-                    tb_writer.add_histogram('classes', c, 0)
+                    try:
+                        tb_writer.add_histogram('classes', c, 0)
+                    except Exception as e:
+                        logger.warning(f"tb_writer.add_histogram failed: {e}")
 
             # Anchors
             if not opt.noautoanchor:
