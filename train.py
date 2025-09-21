@@ -205,7 +205,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
         if not opt.resume:
             labels = np.concatenate(dataset.labels, 0)
-            c = torch.tensor(labels[:, 0])  # classes
+            # Use from_numpy with explicit integer dtype to avoid dtype inference issues
+            c = torch.from_numpy(labels[:, 0].astype(np.int64))  # classes
             # cf = torch.bincount(c.long(), minlength=nc) + 1.  # frequency
             # model._initialize_biases(cf.to(device))
             if plots:
