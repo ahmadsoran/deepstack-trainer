@@ -182,7 +182,8 @@ class SimpleImageDataset(Dataset):
         # Convert to tensor
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR → RGB, CHW
         img = np.ascontiguousarray(img, dtype=np.float32) / 255.0
-        img_tensor = torch.from_numpy(img)
+        # Avoid torch.from_numpy when numpy is not available
+        img_tensor = torch.tensor(img.tolist(), dtype=torch.float32)
 
         # Load labels if available
         labels = []
