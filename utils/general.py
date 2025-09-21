@@ -113,7 +113,9 @@ def labels_to_class_weights(labels, nc=80):
     weights[weights == 0] = 1  # replace empty bins with 1
     weights = 1 / weights  # number of targets per class
     weights /= weights.sum()  # normalize
-    return torch.from_numpy(weights)
+    # Avoid torch.from_numpy which requires numpy in some builds/environments.
+    # Convert to a Python list first and then to a torch Tensor.
+    return torch.tensor(weights.tolist(), dtype=torch.float32)
 
 
 def labels_to_image_weights(labels, nc=80, class_weights=np.ones(80)):
