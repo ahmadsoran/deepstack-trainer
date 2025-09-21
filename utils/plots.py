@@ -99,7 +99,9 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
     # Plot image grid with labels
 
     if isinstance(images, torch.Tensor):
-        images = images.cpu().float().numpy()
+        images = images.cpu().float()
+        # If NumPy is not available, use .tolist() for plotting if needed
+        # images_np = images.tolist()
     if isinstance(targets, torch.Tensor):
         targets = targets.cpu().numpy()
 
