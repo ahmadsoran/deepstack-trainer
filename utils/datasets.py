@@ -100,7 +100,8 @@ def yolov5_collate_fn(batch):
     for batch_idx, (img, labels, path) in enumerate(batch):
         if len(labels) > 0:
             # Add batch index as first column: [batch_idx, class, x, y, w, h]
-            batch_indices = torch.full((len(labels), 1), batch_idx, dtype=torch.float32)
+            # Use long dtype for batch indices to avoid casting issues in loss computation
+            batch_indices = torch.full((len(labels), 1), batch_idx, dtype=torch.long).float()
             labels_with_batch_idx = torch.cat([batch_indices, labels], dim=1)
             labels_list.append(labels_with_batch_idx)
     
