@@ -87,10 +87,11 @@ def img2label_paths(img_paths):
 def yolov5_collate_fn(batch):
     """Collate function compatible with YOLO-style datasets.
 
-    Returns a batch of (imgs, labels, paths) where:
+    Returns a batch of (imgs, labels, paths, shapes) where:
       - imgs: Tensor of shape (B, C, H, W)
       - labels: concatenated labels tensor of shape (N, 5)
       - paths: list of image paths
+      - shapes: placeholder (None for compatibility)
     """
     imgs = torch.stack([x[0] for x in batch])
     labels_list = [x[1] for x in batch]
@@ -102,7 +103,8 @@ def yolov5_collate_fn(batch):
     else:
         labels = torch.zeros((0, 5), dtype=torch.float32)
     paths = [x[2] for x in batch]
-    return imgs, labels, paths
+    shapes = None  # placeholder for compatibility with train.py expectations
+    return imgs, labels, paths, shapes
 
 
 class SimpleImageDataset(Dataset):
