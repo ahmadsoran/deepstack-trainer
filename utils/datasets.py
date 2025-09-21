@@ -89,22 +89,32 @@ def yolov5_collate_fn(batch):
 
     Returns a batch of (imgs, labels, paths, shapes) where:
       - imgs: Tensor of shape (B, C, H, W)
-      - labels: concatenated labels tensor of shape (N, 5)
+      - labels: concatenated labels tensor of shape (N, 6) with batch indices
       - paths: list of image paths
       - shapes: placeholder (None for compatibility)
     """
     imgs = torch.stack([x[0] for x in batch])
-    labels_list = [x[1] for x in batch]
+    labels_list = []
+    
+    # Add batch index as first column to each label tensor
+    for batch_idx, (img, labels, path) in enumerate(batch):
+        if len(labels) > 0:
+            # Add batch index as first column: [batch_idx, class, x, y, w, h]
+            batch_indices = torch.full((len(labels), 1), batch_idx, dtype=torch.float32)
+            labels_with_batch_idx = torch.cat([batch_indices, labels], dim=1)
+            labels_list.append(labels_with_batch_idx)
+    
     if len(labels_list) > 0:
         try:
-            labels = torch.cat(labels_list, 0)
+            targets = torch.cat(labels_list, 0)
         except Exception:
-            labels = torch.zeros((0, 5), dtype=torch.float32)
+            targets = torch.zeros((0, 6), dtype=torch.float32)
     else:
-        labels = torch.zeros((0, 5), dtype=torch.float32)
+        targets = torch.zeros((0, 6), dtype=torch.float32)
+    
     paths = [x[2] for x in batch]
     shapes = None  # placeholder for compatibility with train.py expectations
-    return imgs, labels, paths, shapes
+    return imgs, targets, paths, shapes
 
 
 class SimpleImageDataset(Dataset):
