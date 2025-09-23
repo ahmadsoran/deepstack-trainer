@@ -250,3 +250,5 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 dataset/
+deepstack-traner/
+train-runs

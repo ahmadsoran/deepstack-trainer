@@ -106,7 +106,8 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
         targets = targets.cpu().numpy()
 
     # un-normalise
-    if np.max(images[0]) <= 1:
+    img0 = images[0].cpu().numpy() if isinstance(images[0], torch.Tensor) else images[0]
+    if np.max(img0) <= 1:
         images *= 255
 
     tl = 3  # line thickness
@@ -130,7 +131,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
         block_x = int(w * (i // ns))
         block_y = int(h * (i % ns))
 
-        img = img.transpose(1, 2, 0)
+        img = img.permute(1, 2, 0)
         if scale_factor < 1:
             img = cv2.resize(img, (w, h))
 

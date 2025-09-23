@@ -96,6 +96,8 @@ def test(data,
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+        if shapes is None:
+            shapes = [(img.shape[1:], img.shape[1:])] * img.shape[0]
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -134,7 +136,8 @@ def test(data,
 
             # Predictions
             predn = pred.clone()
-            scale_coords(img[si].shape[1:], predn[:, :4], shapes[si][0], shapes[si][1])  # native-space pred
+            # Fix: Only pass shapes[si][0] (img0_shape) if ratio_pad is not available
+            scale_coords(img[si].shape[1:], predn[:, :4], shapes[si][0])  # native-space pred
 
             # Append to text file
             if save_txt:

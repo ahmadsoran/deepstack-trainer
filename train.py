@@ -33,7 +33,8 @@ from utils.google_utils import attempt_download
 from utils.loss import compute_loss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first
-
+import torch
+print('CUDA available:',torch.cuda.is_available())
 logger = logging.getLogger(__name__)
 
 try:
