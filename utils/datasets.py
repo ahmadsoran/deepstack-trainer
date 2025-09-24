@@ -8,14 +8,14 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image, ExifTags
-from tqdm import tqdm
+
 
 # Logging
 logger = logging.getLogger(__name__)
 
 # Acceptable formats
-IMG_FORMATS = {'bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff'}
-VID_FORMATS = {'mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv'}
+IMG_FORMATS = {"bmp", "jpg", "jpeg", "png", "tif", "tiff"}
+VID_FORMATS = {"mov", "avi", "mp4", "mpg", "mpeg", "m4v", "wmv", "mkv"}
 
 # Orientation exif tag
 EXIF_ORIENTATION = {v: k for k, v in ExifTags.TAGS.items()}.get("Orientation", None)
@@ -34,7 +34,15 @@ def exif_size(img: Image.Image):
     return s
 
 
-def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
+def letterbox(
+    im,
+    new_shape=(640, 640),
+    color=(114, 114, 114),
+    auto=True,
+    scaleFill=False,
+    scaleup=True,
+    stride=32,
+):
     """Resize and pad image while meeting stride-multiple constraints.
 
     Returns:
@@ -73,15 +81,22 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
     # Pad
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
+    im = cv2.copyMakeBorder(
+        im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color
+    )
 
     return im, r, (dw, dh)
 
 
 def img2label_paths(img_paths):
     """Derive label paths from image paths (for YOLO txt labels)."""
-    return [p.replace(os.sep + "images" + os.sep, os.sep + "labels" + os.sep, 1).rsplit(".", 1)[0] + ".txt"
-            for p in img_paths]
+    return [
+        p.replace(os.sep + "images" + os.sep, os.sep + "labels" + os.sep, 1).rsplit(
+            ".", 1
+        )[0]
+        + ".txt"
+        for p in img_paths
+    ]
 
 
 def yolov5_collate_fn(batch):
@@ -95,16 +110,18 @@ def yolov5_collate_fn(batch):
     """
     imgs = torch.stack([x[0] for x in batch])
     labels_list = []
-    
+
     # Add batch index as first column to each label tensor
     for batch_idx, (img, labels, path) in enumerate(batch):
         if len(labels) > 0:
             # Add batch index as first column: [batch_idx, class, x, y, w, h]
             # Use long dtype for batch indices to avoid casting issues in loss computation
-            batch_indices = torch.full((len(labels), 1), batch_idx, dtype=torch.long).float()
+            batch_indices = torch.full(
+                (len(labels), 1), batch_idx, dtype=torch.long
+            ).float()
             labels_with_batch_idx = torch.cat([batch_indices, labels], dim=1)
             labels_list.append(labels_with_batch_idx)
-    
+
     if len(labels_list) > 0:
         try:
             targets = torch.cat(labels_list, 0)
@@ -112,9 +129,28 @@ def yolov5_collate_fn(batch):
             targets = torch.zeros((0, 6), dtype=torch.float32)
     else:
         targets = torch.zeros((0, 6), dtype=torch.float32)
-    
+
     paths = [x[2] for x in batch]
-    shapes = None  # placeholder for compatibility with train.py expectations
+    # shapes: list of tuples (img1_shape, img0_shape) for each image
+    # img1_shape: shape after preprocessing (height, width)
+    # img0_shape: original shape (height, width)
+    shapes = []
+    for x in batch:
+        img_tensor = x[0]
+        img1_shape = tuple(img_tensor.shape[1:])  # (height, width)
+        # Try to get original shape from file if possible
+        img_path = x[2]
+        try:
+            import cv2
+
+            img0 = cv2.imread(img_path)
+            if img0 is not None:
+                img0_shape = tuple(img0.shape[:2])
+            else:
+                img0_shape = img1_shape
+        except Exception:
+            img0_shape = img1_shape
+        shapes.append((img1_shape, img0_shape))
     return imgs, targets, paths, shapes
 
 
@@ -164,7 +200,9 @@ class SimpleImageDataset(Dataset):
                 except Exception:
                     # fallback: read line by line
                     with open(lbl_path) as f:
-                        lines = [list(map(float, line.split())) for line in f if line.strip()]
+                        lines = [
+                            list(map(float, line.split())) for line in f if line.strip()
+                        ]
                     if len(lines) == 0:
                         lb = np.zeros((0, 5), dtype=np.float32)
                     else:
@@ -210,9 +248,15 @@ class SimpleImageDataset(Dataset):
         return img_tensor, labels, img_path
 
 
-def create_dataloader(path, imgsz=640, batch_size=16, gs=32, opt=None, hyp=None,
-                      augment=False, cache=False, rect=False, rank=-1,
-                      world_size=1, workers=8, image_weights=False, pad=0.5):
+def create_dataloader(
+    path,
+    imgsz=640,
+    batch_size=16,
+    augment=False,
+    rect=False,
+    rank=-1,
+    workers=8,
+):
     """Create a DataLoader compatible with the training script.
 
     This is a simplified implementation that wraps SimpleImageDataset while
@@ -228,11 +272,13 @@ def create_dataloader(path, imgsz=640, batch_size=16, gs=32, opt=None, hyp=None,
     # Use top-level collate function to ensure picklability with multiprocessing
     from utils.datasets import yolov5_collate_fn
 
-    loader = DataLoader(dataset,
-                        batch_size=batch_size,
-                        shuffle=shuffle,
-                        num_workers=min(workers, os.cpu_count() or 1),
-                        pin_memory=True,
-                        collate_fn=yolov5_collate_fn)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=min(workers, os.cpu_count() or 1),
+        pin_memory=True,
+        collate_fn=yolov5_collate_fn,
+    )
 
     return loader, dataset
