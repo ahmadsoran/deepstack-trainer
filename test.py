@@ -105,9 +105,7 @@ def test(
         path = (
             data["test"] if opt.task == "test" else data["val"]
         )  # path to val/test images
-        dataloader = create_dataloader(
-            path, imgsz, batch_size, model.stride.max(), opt, pad=0.5, rect=True
-        )[0]
+        dataloader = create_dataloader(path, imgsz, batch_size, pad=0.5, rect=True)[0]
 
     seen = 0
     confusion_matrix = ConfusionMatrix(nc=nc)

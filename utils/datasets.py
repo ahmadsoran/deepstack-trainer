@@ -157,10 +157,11 @@ def yolov5_collate_fn(batch):
 class SimpleImageDataset(Dataset):
     """Minimal YOLO-style dataset loader (works on macOS)."""
 
-    def __init__(self, path, img_size=640, augment=False):
+    def __init__(self, path, img_size=640, augment=False, pad=0.0):
         super().__init__()
         self.img_size = img_size
         self.augment = augment
+        self.pad = pad
 
         # Collect files
         files = []
@@ -224,11 +225,22 @@ class SimpleImageDataset(Dataset):
         assert img is not None, f"Image not found: {img_path}"
         h0, w0 = img.shape[:2]
 
-        # Resize
-        r = self.img_size / max(h0, w0)
-        if r != 1:
-            interp = cv2.INTER_AREA if r < 1 else cv2.INTER_LINEAR
-            img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
+        # Resize and pad using letterbox if pad > 0
+        if self.pad > 0:
+            img, ratio, (dw, dh) = letterbox(
+                img,
+                new_shape=(self.img_size, self.img_size),
+                auto=False,
+                scaleFill=False,
+                scaleup=True,
+                stride=32,
+            )
+        else:
+            # Simple resize without padding
+            r = self.img_size / max(h0, w0)
+            if r != 1:
+                interp = cv2.INTER_AREA if r < 1 else cv2.INTER_LINEAR
+                img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
 
         # Convert to tensor
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR → RGB, CHW
@@ -256,6 +268,7 @@ def create_dataloader(
     rect=False,
     rank=-1,
     workers=8,
+    pad=0.0,
 ):
     """Create a DataLoader compatible with the training script.
 
@@ -264,7 +277,7 @@ def create_dataloader(
     (rectangular batching, caching, image-weights) are not implemented here
     but the function signature is compatible.
     """
-    dataset = SimpleImageDataset(path, img_size=imgsz, augment=augment)
+    dataset = SimpleImageDataset(path, img_size=imgsz, augment=augment, pad=pad)
 
     # Shuffle when not using rectangular training and not in distributed mode
     shuffle = not rect and rank in (-1, 0)

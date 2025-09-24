@@ -257,15 +257,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         train_path,
         imgsz,
         batch_size,
-        gs,
-        opt,
         augment=True,
-        cache=opt.cache_images,
         rect=opt.rect,
         rank=rank,
-        world_size=opt.world_size,
         workers=opt.workers,
-        image_weights=opt.image_weights,
     )
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
@@ -281,14 +276,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             test_path,
             imgsz_test,
             total_batch_size,
-            gs,
-            opt,  # testloader
-            cache=opt.cache_images and not opt.notest,
+            augment=False,
             rect=True,
             rank=-1,
-            world_size=opt.world_size,
             workers=opt.workers,
-            pad=0.5,
         )[0]
 
         if not opt.resume:
