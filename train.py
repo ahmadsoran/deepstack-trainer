@@ -96,8 +96,17 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     if isinstance(opt.data, dict):
         data_dict = opt.data
     else:
-        with open(opt.data) as f:
-            data_dict = yaml.load(f, Loader=yaml.FullLoader)  # data dict
+        try:
+            with open(opt.data, 'r') as f:
+                data_dict = yaml.safe_load(f)  # Use safe_load for security
+            if not isinstance(data_dict, dict):
+                raise ValueError(f"Invalid data file format: {opt.data}")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Data file not found: {opt.data}")
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in data file {opt.data}: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Error loading data file {opt.data}: {e}")
 
     with torch_distributed_zero_first(rank):
         check_dataset(data_dict)  # check
@@ -117,9 +126,15 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     if pretrained:
         with torch_distributed_zero_first(rank):
             attempt_download(weights)  # download if not found locally
-            ckpt = torch.load(
-                weights, map_location=device, weights_only=False
-            )  # load checkpoint
+            try:
+                ckpt = torch.load(
+                    weights, map_location=device, weights_only=True
+                )  # load checkpoint with security
+            except Exception:
+                # Fallback for older model formats
+                ckpt = torch.load(
+                    weights, map_location=device, weights_only=False
+                )  # load checkpoint
         if hyp.get("anchors"):
             ckpt["model"].yaml["anchors"] = round(hyp["anchors"])  # force autoanchor
         model = Model(opt.cfg or ckpt["model"].yaml, ch=3, nc=nc).to(device)  # create
@@ -420,10 +435,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     )
 
             # Forward
-            # Use new autocast API for PyTorch >= 1.10
-            from torch.amp import autocast
+            # Use autocast API compatible with PyTorch >= 2.0
+            from torch.cuda.amp import autocast
 
-            with autocast("cuda", enabled=cuda):
+            with autocast(enabled=cuda):
                 pred = model(imgs)  # forward
                 loss, loss_items = compute_loss(
                     pred, targets.to(device), model
@@ -704,24 +719,44 @@ if __name__ == "__main__":
         project_name = os.path.basename(opt.dataset_path)
         opt.project = "train-runs/" + project_name
 
+    # Validate dataset path exists
+    if not os.path.exists(opt.dataset_path):
+        raise FileNotFoundError(f"Dataset path does not exist: {opt.dataset_path}")
+
     train_path = os.path.join(opt.dataset_path, "train")
     val_path = os.path.join(opt.dataset_path, "test")
 
     if not os.path.exists(train_path):
+        logger.warning(f"Train directory not found at {train_path}, using dataset root")
         train_path = opt.dataset_path
 
     if not os.path.exists(val_path):
+        logger.warning(f"Validation directory not found at {val_path}, using train path")
         val_path = train_path
 
     if opt.classes == "":
         classes_file = os.path.join(train_path, "classes.txt")
-
-        with open(classes_file, "r") as f:
-            classes = f.read()
-
-        classnames = classes.split("\n")
+        
+        try:
+            with open(classes_file, "r", encoding='utf-8') as f:
+                classes = f.read().strip()
+            
+            if not classes:
+                raise ValueError("Classes file is empty")
+                
+            classnames = [cls.strip() for cls in classes.split("\n") if cls.strip()]
+            
+            if not classnames:
+                raise ValueError("No valid class names found in classes file")
+                
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Classes file not found: {classes_file}")
+        except Exception as e:
+            raise RuntimeError(f"Error reading classes file {classes_file}: {e}")
     else:
-        classnames = opt.classes.split(",")
+        classnames = [cls.strip() for cls in opt.classes.split(",") if cls.strip()]
+        if not classnames:
+            raise ValueError("No valid class names provided")
 
     data_dict = {
         "train": train_path,

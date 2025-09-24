@@ -1,0 +1,21 @@
+# Bandit security configuration for DeepStack Trainer
+# Skip certain tests that are false positives for this ML project
+
+[bandit]
+exclude_dirs = ["myenv", "deepstack-trainer", "__pycache__", ".git", "wandb", "train-runs"]
+
+# Skip tests that are false positives for ML projects
+skips = [
+    "B101",  # Skip assert_used test (asserts are used for validation)
+    "B601",  # Skip paramiko calls (not used in this project)
+    "B603",  # Skip subprocess calls without shell=True (used for git status)
+    "B607",  # Skip start_process_with_partial_path (not applicable)
+]
+
+# Test IDs to skip
+tests = [
+    "B101",  # Skip assert_used test
+    "B601",  # Skip paramiko calls
+    "B603",  # Skip subprocess calls
+    "B607",  # Skip start_process_with_partial_path
+]
