@@ -782,7 +782,7 @@ if __name__ == "__main__":
         )  # specified or most recent path
         assert os.path.isfile(ckpt), "ERROR: --resume checkpoint does not exist"
         with open(Path(ckpt).parent.parent / "opt.yaml") as f:
-            opt = argparse.Namespace(**yaml.load(f, Loader=yaml.FullLoader))  # replace
+            opt = argparse.Namespace(**yaml.safe_load(f))  # replace
         opt.cfg, opt.weights, opt.resume = "", ckpt, True
         logger.info("Resuming training from %s" % ckpt)
     else:
@@ -818,7 +818,7 @@ if __name__ == "__main__":
 
     # Hyperparameters
     with open(opt.hyp) as f:
-        hyp = yaml.load(f, Loader=yaml.FullLoader)  # load hyps
+        hyp = yaml.safe_load(f)  # load hyps
         if "box" not in hyp:
             warn(
                 'Compatibility: %s missing "box" which was renamed from "giou" in %s'

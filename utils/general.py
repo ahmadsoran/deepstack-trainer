@@ -484,7 +484,14 @@ def strip_optimizer(
     f="weights/best.pt", s=""
 ):  # from utils.general import *; strip_optimizer()
     # Strip optimizer from 'f' to finalize training, optionally save as 's'
-    x = torch.load(f, map_location=torch.device("cpu"))
+    try:
+        # Try loading with weights_only=True first for security
+        x = torch.load(f, map_location=torch.device("cpu"), weights_only=True)
+    except Exception:
+        # Fallback to weights_only=False for older model formats
+        # This is safe since we're loading our own trained models
+        x = torch.load(f, map_location=torch.device("cpu"), weights_only=False)
+    
     x["optimizer"] = None
     x["training_results"] = None
     x["epoch"] = -1
