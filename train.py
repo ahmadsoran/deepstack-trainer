@@ -259,7 +259,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         batch_size,
         gs,
         opt,
-        hyp=hyp,
         augment=True,
         cache=opt.cache_images,
         rect=opt.rect,
@@ -284,7 +283,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             total_batch_size,
             gs,
             opt,  # testloader
-            hyp=hyp,
             cache=opt.cache_images and not opt.notest,
             rect=True,
             rank=-1,
@@ -732,8 +730,7 @@ if __name__ == "__main__":
 
         classnames = classes.split("\n")
     else:
-        classnames = classes.split(",")
-        classnames = opt.classes
+        classnames = opt.classes.split(",")
 
     data_dict = {
         "train": train_path,
