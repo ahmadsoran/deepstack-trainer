@@ -416,11 +416,11 @@ def non_max_suppression(
 
         # Cat apriori labels if autolabelling
         if labels and len(labels[xi]):
-            l = labels[xi]
-            v = torch.zeros((len(l), nc + 5), device=x.device)
-            v[:, :4] = l[:, 1:5]  # box
+            current_labels = labels[xi]
+            v = torch.zeros((len(current_labels), nc + 5), device=x.device)
+            v[:, :4] = current_labels[:, 1:5]  # box
             v[:, 4] = 1.0  # conf
-            v[range(len(l)), l[:, 0].long() + 5] = 1.0  # cls
+            v[range(len(current_labels)), current_labels[:, 0].long() + 5] = 1.0  # cls
             x = torch.cat((x, v), 0)
 
         # If none remain process next image
